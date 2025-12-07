@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Reports - Fire Prevention System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container header-content">
+            <h2 class="header-title">🔥 Fire Prevention System</h2>
+            <nav class="header-nav">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/reports" class="nav-link active">Reports</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container reports-container">
+        <h1 class="reports-title">📊 Detection Reports & Analytics</h1>
+
+        <!-- Statistics Cards -->
+        <div class="stats-grid">
+            <div class="stat-card-report">
+                <div class="stat-icon-large">📈</div>
+                <h3>Total Sessions</h3>
+                <p class="stat-number" id="totalSessions">0</p>
+            </div>
+            <div class="stat-card-report fire-stat">
+                <div class="stat-icon-large">🔥</div>
+                <h3>Total Fire Detections</h3>
+                <p class="stat-number" id="totalFire">0</p>
+            </div>
+            <div class="stat-card-report smoke-stat">
+                <div class="stat-icon-large">💨</div>
+                <h3>Total Smoke Detections</h3>
+                <p class="stat-number" id="totalSmoke">0</p>
+            </div>
+            <div class="stat-card-report recent-stat">
+                <div class="stat-icon-large">⏱️</div>
+                <h3>Recent Sessions (24h)</h3>
+                <p class="stat-number" id="recentSessions">0</p>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="charts-section">
+            <div class="chart-card">
+                <h3>🔥 Average Detections Per Session</h3>
+                <canvas id="averageChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>📊 Detection Trend</h3>
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <h3>🔍 Filter Sessions</h3>
+            <div class="filter-controls">
+                <div class="filter-group">
+                    <label>Start Date:</label>
+                    <input type="date" id="startDate" class="date-input">
+                </div>
+                <div class="filter-group">
+                    <label>End Date:</label>
+                    <input type="date" id="endDate" class="date-input">
+                </div>
+                <button class="btn-filter" id="filterBtn">Apply Filter</button>
+                <button class="btn-reset" id="resetBtn">Reset</button>
+            </div>
+        </div>
+
+        <!-- Sessions Table -->
+        <div class="table-section">
+            <div class="table-header">
+                <h3>📋 Detection Sessions History</h3>
+                <button class="btn-refresh" id="refreshBtn">🔄 Refresh</button>
+            </div>
+            <div class="table-responsive">
+                <table class="sessions-table">
+                    <thead>
+                        <tr>
+                            <th>Session ID</th>
+                            <th>Start Time</th>
+                            <th>End Time</th>
+                            <th>Duration</th>
+                            <th>Fire Detections</th>
+                            <th>Smoke Detections</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sessionsTable">
+                        <tr>
+                            <td colspan="8" class="loading">Loading data...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Session Details Modal -->
+        <div id="detailsModal" class="modal">
+            <div class="modal-content details-modal">
+                <span class="close-btn" id="closeDetails">&times;</span>
+                <div class="modal-header">
+                    <h2>📊 Session Details</h2>
+                </div>
+                <div class="modal-body">
+                    <div class="session-info" id="sessionInfo"></div>
+                    <div class="session-logs">
+                        <h3>Detection Timeline</h3>
+                        <canvas id="sessionChart"></canvas>
+                        <div class="logs-table-wrapper">
+                            <table class="logs-table">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Fire Count</th>
+                                        <th>Smoke Count</th>
+                                        <th>Alert</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logsTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <h3>🔥 Fire Prevention System</h3>
+                    <p>Advanced AI-Powered Safety Solution</p>
+                </div>
+                <div class="footer-info">
+                    <p>Developed at Laguna State Polytechnic University Sta. Cruz Campus</p>
+                    <p class="footer-year">© 2024 All Rights Reserved</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Initialize charts
+        const avgCtx = document.getElementById('averageChart').getContext('2d');
+        const avgChart = new Chart(avgCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Fire', 'Smoke'],
+                datasets: [{
+                    label: 'Average Per Session',
+                    data: [0, 0],
+                    backgroundColor: ['rgba(255, 68, 68, 0.6)', 'rgba(136, 136, 136, 0.6)'],
+                    borderColor: ['#ff4444', '#888'],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: '#ccc' }
+                    },
+                    x: {
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: '#ccc' }
+                    }
+                },
+                plugins: {
+                    legend: { labels: { color: '#ccc' } }
+                }
+            }
+        });
+
+        const trendCtx = document.getElementById('trendChart').getContext('2d');
+        let trendChart = new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Fire',
+                    data: [],
+                    borderColor: '#ff4444',
+                    backgroundColor: 'rgba(255, 68, 68, 0.2)',
+                    tension: 0.4
+                }, {
+                    label: 'Smoke',
+                    data: [],
+                    borderColor: '#888',
+                    backgroundColor: 'rgba(136, 136, 136, 0.2)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: '#ccc' }
+                    },
+                    x: {
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: '#ccc' }
+                    }
+                },
+                plugins: {
+                    legend: { labels: { color: '#ccc' } }
+                }
+            }
+        });
+
+        let sessionChart = null;
+
+        // Load statistics
+        async function loadStatistics() {
+            try {
+                const response = await fetch('/api/statistics');
+                const stats = await response.json();
+                
+                document.getElementById('totalSessions').textContent = stats.total_sessions;
+                document.getElementById('totalFire').textContent = stats.total_fire_detections;
+                document.getElementById('totalSmoke').textContent = stats.total_smoke_detections;
+                document.getElementById('recentSessions').textContent = stats.recent_sessions;
+                
+                avgChart.data.datasets[0].data = [stats.avg_fire_per_session, stats.avg_smoke_per_session];
+                avgChart.update();
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+            }
+        }
+
+        // Load sessions
+        async function loadSessions(startDate = null, endDate = null) {
+            try {
+                let url = '/api/sessions';
+                if (startDate && endDate) {
+                    url = `/api/reports/date-range?start_date=${startDate}&end_date=${endDate}`;
+                }
+                
+                const response = await fetch(url);
+                const sessions = await response.json();
+                
+                const tbody = document.getElementById('sessionsTable');
+                tbody.innerHTML = '';
+                
+                if (sessions.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="no-data">No sessions found</td></tr>';
+                    return;
+                }
+                
+                // Update trend chart
+                trendChart.data.labels = sessions.slice(0, 10).reverse().map(s => 
+                    new Date(s.start_time).toLocaleDateString()
+                );
+                trendChart.data.datasets[0].data = sessions.slice(0, 10).reverse().map(s => s.total_fire);
+                trendChart.data.datasets[1].data = sessions.slice(0, 10).reverse().map(s => s.total_smoke);
+                trendChart.update();
+                
+                sessions.forEach(session => {
+                    const row = document.createElement('tr');
+                    
+                    const startTime = new Date(session.start_time);
+                    const endTime = session.end_time ? new Date(session.end_time) : null;
+                    const duration = endTime ? 
+                        Math.round((endTime - startTime) / 1000 / 60) + ' min' : 
+                        'Active';
+                    
+                    const statusClass = session.status === 'active' ? 'status-active' : 'status-completed';
+                    
+                    row.innerHTML = `
+                        <td>#${session.id}</td>
+                        <td>${startTime.toLocaleString()}</td>
+                        <td>${endTime ? endTime.toLocaleString() : 'N/A'}</td>
+                        <td>${duration}</td>
+                        <td class="fire-count">${session.total_fire}</td>
+                        <td class="smoke-count">${session.total_smoke}</td>
+                        <td><span class="status-badge ${statusClass}">${session.status}</span></td>
+                        <td><button class="btn-view" onclick="viewSession(${session.id})">View</button></td>
+                    `;
+                    
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error loading sessions:', error);
+                document.getElementById('sessionsTable').innerHTML = 
+                    '<tr><td colspan="8" class="error">Error loading data</td></tr>';
+            }
+        }
+
+        // View session details
+        async function viewSession(sessionId) {
+            try {
+                const response = await fetch(`/api/session/${sessionId}`);
+                const logs = await response.json();
+                
+                const modal = document.getElementById('detailsModal');
+                const sessionInfo = document.getElementById('sessionInfo');
+                const logsTable = document.getElementById('logsTable');
+                
+                if (logs.length > 0) {
+                    const firstLog = logs[0];
+                    sessionInfo.innerHTML = `
+                        <p><strong>Session ID:</strong> #${sessionId}</p>
+                        <p><strong>Total Logs:</strong> ${logs.length}</p>
+                        <p><strong>Start Time:</strong> ${new Date(firstLog.timestamp).toLocaleString()}</p>
+                    `;
+                    
+                    // Update session chart
+                    const labels = logs.map(log => new Date(log.timestamp).toLocaleTimeString());
+                    const fireData = logs.map(log => log.fire_count);
+                    const smokeData = logs.map(log => log.smoke_count);
+                    
+                    if (sessionChart) {
+                        sessionChart.destroy();
+                    }
+                    
+                    const ctx = document.getElementById('sessionChart').getContext('2d');
+                    sessionChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Fire',
+                                data: fireData,
+                                borderColor: '#ff4444',
+                                backgroundColor: 'rgba(255, 68, 68, 0.2)',
+                                tension: 0.4
+                            }, {
+                                label: 'Smoke',
+                                data: smokeData,
+                                borderColor: '#888',
+                                backgroundColor: 'rgba(136, 136, 136, 0.2)',
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: { 
+                                    beginAtZero: true,
+                                    grid: { color: 'rgba(255,255,255,0.1)' },
+                                    ticks: { color: '#ccc' }
+                                },
+                                x: {
+                                    grid: { color: 'rgba(255,255,255,0.05)' },
+                                    ticks: { color: '#ccc', maxRotation: 45 }
+                                }
+                            },
+                            plugins: {
+                                legend: { labels: { color: '#ccc' } }
+                            }
+                        }
+                    });
+                    
+                    // Update logs table
+                    logsTable.innerHTML = '';
+                    logs.forEach(log => {
+                        const row = document.createElement('tr');
+                        const alertIcon = log.alert_triggered ? '⚠️' : '✓';
+                        row.innerHTML = `
+                            <td>${new Date(log.timestamp).toLocaleTimeString()}</td>
+                            <td class="fire-count">${log.fire_count}</td>
+                            <td class="smoke-count">${log.smoke_count}</td>
+                            <td>${alertIcon}</td>
+                        `;
+                        logsTable.appendChild(row);
+                    });
+                }
+                
+                modal.style.display = 'block';
+                setTimeout(() => modal.classList.add('show'), 10);
+            } catch (error) {
+                console.error('Error loading session details:', error);
+                alert('Error loading session details');
+            }
+        }
+
+        // Modal controls
+        document.getElementById('closeDetails').onclick = () => {
+            const modal = document.getElementById('detailsModal');
+            modal.classList.remove('show');
+            setTimeout(() => modal.style.display = 'none', 300);
+        };
+
+        window.onclick = (e) => {
+            const modal = document.getElementById('detailsModal');
+            if (e.target === modal) {
+                modal.classList.remove('show');
+                setTimeout(() => modal.style.display = 'none', 300);
+            }
+        };
+
+        // Filter controls
+        document.getElementById('filterBtn').onclick = () => {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            if (startDate && endDate) {
+                loadSessions(startDate, endDate);
+            } else {
+                alert('Please select both start and end dates');
+            }
+        };
+
+        document.getElementById('resetBtn').onclick = () => {
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            loadSessions();
+        };
+
+        document.getElementById('refreshBtn').onclick = () => {
+            loadStatistics();
+            loadSessions();
+        };
+
+        // Initial load
+        loadStatistics();
+        loadSessions();
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            loadStatistics();
+            loadSessions();
+        }, 30000);
+    </script>
+
+    <style>
+        .reports-container {
+            padding: 40px 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .reports-title {
+            text-align: center;
+            color: #ff4444;
+            margin-bottom: 40px;
+            font-size: 2.5rem;
+            text-shadow: 0 0 20px rgba(255, 68, 68, 0.5);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card-report {
+            background: linear-gradient(135deg, #1a1a1a, #0f0f0f);
+            padding: 30px;
+            border-radius: 16px;
+            border: 2px solid #333;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card-report:hover {
+            transform: translateY(-5px);
+            border-color: #ff4444;
+            box-shadow: 0 10px 30px rgba(255, 68, 68, 0.3);
+        }
+
+        .fire-stat:hover { border-color: #ff4444; }
+        .smoke-stat:hover { border-color: #888; }
+        .recent-stat:hover { border-color: #00c851; }
+
+        .stat-icon-large {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .stat-card-report h3 {
+            color: #ccc;
+            font-size: 1rem;
+            margin-bottom: 10px;
+        }
+
+        .stat-number {
+            color: #ff4444;
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .charts-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .chart-card {
+            background: #1a1a1a;
+            padding: 25px;
+            border-radius: 16px;
+            border: 1px solid #333;
+        }
+
+        .chart-card h3 {
+            color: #ff4444;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .chart-card canvas {
+            height: 300px !important;
+        }
+
+        .filter-section {
+            background: #1a1a1a;
+            padding: 25px;
+            border-radius: 16px;
+            border: 1px solid #333;
+            margin-bottom: 40px;
+        }
+
+        .filter-section h3 {
+            color: #ff4444;
+            margin-bottom: 20px;
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .filter-group label {
+            color: #ccc;
+            font-size: 0.9rem;
+        }
+
+        .date-input {
+            padding: 10px 15px;
+            background: #0f0f0f;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 1rem;
+        }
+
+        .btn-filter, .btn-reset, .btn-refresh {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-filter {
+            background: linear-gradient(135deg, #00c851, #00a841);
+            color: white;
+        }
+
+        .btn-filter:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 200, 81, 0.4);
+        }
+
+        .btn-reset {
+            background: linear-gradient(135deg, #888, #666);
+            color: white;
+        }
+
+        .btn-reset:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-refresh {
+            background: linear-gradient(135deg, #ff4444, #cc0000);
+            color: white;
+        }
+
+        .table-section {
+            background: #1a1a1a;
+            padding: 25px;
+            border-radius: 16px;
+            border: 1px solid #333;
+            margin-bottom: 40px;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .table-header h3 {
+            color: #ff4444;
+            margin: 0;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .sessions-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .sessions-table thead {
+            background: #0f0f0f;
+        }
+
+        .sessions-table th {
+            padding: 15px;
+            text-align: left;
+            color: #ff4444;
+            font-weight: bold;
+            border-bottom: 2px solid #333;
+        }
+
+        .sessions-table td {
+            padding: 15px;
+            border-bottom: 1px solid #333;
+            color: #ccc;
+        }
+
+        .sessions-table tbody tr {
+            transition: 0.3s;
+        }
+
+        .sessions-table tbody tr:hover {
+            background: rgba(255, 68, 68, 0.05);
+        }
+
+        .fire-count {
+            color: #ff4444;
+            font-weight: bold;
+        }
+
+        .smoke-count {
+            color: #888;
+            font-weight: bold;
+        }
+
+        .status-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        .status-active {
+            background: rgba(0, 200, 81, 0.2);
+            color: #00c851;
+            border: 1px solid #00c851;
+        }
+
+        .status-completed {
+            background: rgba(136, 136, 136, 0.2);
+            color: #888;
+            border: 1px solid #888;
+        }
+
+        .btn-view {
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #ff4444, #cc0000);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .btn-view:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 68, 68, 0.4);
+        }
+
+        .loading, .no-data, .error {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+            font-style: italic;
+        }
+
+        .error {
+            color: #ff4444;
+        }
+
+        .details-modal {
+            max-width: 1000px;
+        }
+
+        .session-info {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .session-info p {
+            margin: 10px 0;
+            color: #ccc;
+        }
+
+        .session-logs h3 {
+            color: #ff4444;
+            margin: 20px 0;
+        }
+
+        #sessionChart {
+            height: 250px !important;
+            margin-bottom: 20px;
+        }
+
+        .logs-table-wrapper {
+            max-height: 300px;
+            overflow-y: auto;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+
+        .logs-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .logs-table thead {
+            position: sticky;
+            top: 0;
+            background: #0f0f0f;
+            z-index: 10;
+        }
+
+        .logs-table th {
+            padding: 12px;
+            text-align: left;
+            color: #ff4444;
+            border-bottom: 2px solid #333;
+        }
+
+        .logs-table td {
+            padding: 12px;
+            border-bottom: 1px solid #333;
+            color: #ccc;
+        }
+
+        .nav-link.active {
+            background: #ff4444;
+            color: white !important;
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .charts-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .filter-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filter-group {
+                width: 100%;
+            }
+            
+            .btn-filter, .btn-reset {
+                width: 100%;
+            }
+        }
+    </style>
+</body>
+</html>

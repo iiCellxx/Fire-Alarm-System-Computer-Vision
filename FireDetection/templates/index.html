@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fire Prevention System - Real-Time Detection</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container header-content">
+            <h2 class="header-title">🔥 Fire Prevention System</h2>
+            <nav class="header-nav">
+                <a href="/reports" class="nav-link">Reports</a>
+                <a href="#" class="nav-link" id="aboutBtn">About</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Alert Notification -->
+    <div id="alertBox" class="alert-hidden">
+        <span class="alert-close" id="alertClose">&times;</span>
+        <strong id="alertTitle">⚠️ FIRE DETECTED!</strong><br>
+        <span id="alertDetails"></span>
+    </div>
+
+    <!-- About Modal Popup -->
+    <div id="aboutModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <div class="modal-header">
+                <h2>🔥 About Fire Prevention System</h2>
+            </div>
+            <div class="modal-body">
+                <div class="modal-section">
+                    <h3>🎯 System Overview</h3>
+                    <p>This real-time fire and smoke detection system leverages advanced <strong>YOLOv12 deep learning technology</strong> to identify potential fire hazards from RTSP camera feeds with remarkable accuracy and speed.</p>
+                </div>
+
+                <div class="modal-section">
+                    <h3>✨ Key Features</h3>
+                    <ul>
+                        <li><strong>Real-Time Detection:</strong> Instant fire and smoke recognition</li>
+                        <li><strong>AI-Powered:</strong> YOLOv12 neural network with high accuracy</li>
+                        <li><strong>Live Monitoring:</strong> RTSP camera feed integration</li>
+                        <li><strong>Visual Tracking:</strong> Detection history with interactive charts</li>
+                        <li><strong>Alert System:</strong> Immediate notifications on detection</li>
+                    </ul>
+                </div>
+
+                <div class="modal-section">
+                    <h3>🛡️ Safety & Prevention</h3>
+                    <p>Designed for early warning and prevention, this system helps protect lives and property by detecting fire hazards before they escalate. Perfect for campus facilities, warehouses, offices, and any environment requiring constant fire monitoring.</p>
+                </div>
+
+                <div class="modal-section">
+                    <h3>🎓 Development</h3>
+                    <p>Developed with precision and reliability at <strong>Laguna State Polytechnic University - Sta. Cruz Campus</strong> as part of our commitment to innovative safety solutions.</p>
+                </div>
+
+                <div class="modal-section team-section">
+                    <h3>👥 Meet the Development Team</h3>
+                    <div class="team-grid">
+                        <div class="team-card">
+                            <div class="team-avatar">
+                                <img src="{{ url_for('static', filename='images/vanesse.jpg') }}" alt="Vanesse Reyes">
+                            </div>
+                            <h4>Vanesse Reyes</h4>
+                            <p class="role">Lead Developer | UI/UX Designer</p>
+                            <p class="description">Responsible for system architecture, frontend development, and creating the intuitive user interface.</p>
+                        </div>
+                        <div class="team-card">
+                            <div class="team-avatar">
+                                <img src="{{ url_for('static', filename='images/celrick.jpg') }}" alt="Cel Rick D Almario">
+                            </div>
+                            <h4>Cel Rick D Almario</h4>
+                            <p class="role">Backend Developer | Documentation Lead</p>
+                            <p class="description">Handles AI model integration, backend infrastructure, and comprehensive system documentation.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-section tech-stack">
+                    <h3>🔧 Technology Stack</h3>
+                    <div class="tech-badges">
+                        <span class="badge">Python</span>
+                        <span class="badge">Flask</span>
+                        <span class="badge">YOLOv12</span>
+                        <span class="badge">OpenCV</span>
+                        <span class="badge">RTSP Streaming</span>
+                        <span class="badge">Chart.js</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <p>© 2024 Laguna State Polytechnic University - Sta. Cruz Campus</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Layout: Video + Graph Side by Side -->
+    <div class="container main-layout">
+        <div class="left-panel">
+            <h1>🔴 Live Fire & Smoke Detection</h1>
+            <div class="video-container" id="videoContainer">
+                <img id="feed" src="" alt="Live Feed">
+                <div class="video-overlay" id="videoOverlay">
+                    <div class="overlay-content">
+                        <div class="camera-icon">📹</div>
+                        <p>Camera Ready</p>
+                        <p class="overlay-hint">Click "Start Analysing" to begin</p>
+                    </div>
+                </div>
+            </div>
+            <div class="controls">
+                <button id="startBtn">
+                    <span class="btn-icon">▶️</span> Start Analysing
+                </button>
+                <button id="stopBtn" disabled>
+                    <span class="btn-icon">⏹️</span> Stop Camera
+                </button>
+                <button id="soundToggle" class="btn-sound" title="Toggle sound alerts">
+                    <span class="btn-icon">🔊</span> Sound: ON
+                </button>
+            </div>
+            <div class="status-container">
+                <div class="status" id="status">
+                    <span class="status-icon">⏸️</span> Camera Stopped
+                </div>
+            </div>
+            
+            <!-- Detection Stats -->
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-icon">🔥</div>
+                    <div class="stat-info">
+                        <h4>Fire Detected</h4>
+                        <p class="stat-value" id="fireCount">0</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">💨</div>
+                    <div class="stat-info">
+                        <h4>Smoke Detected</h4>
+                        <p class="stat-value" id="smokeCount">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <h3>📊 Detection History</h3>
+            <div class="chart-container">
+                <canvas id="detectionChart"></canvas>
+            </div>
+            <div class="legend">
+                <span class="legend-fire">● Fire</span>
+                <span class="legend-smoke">● Smoke</span>
+            </div>
+            <div class="chart-info">
+                <p>Real-time tracking of fire and smoke detection events over time</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <h3>🔥 Fire Prevention System</h3>
+                    <p>Advanced AI-Powered Safety Solution</p>
+                </div>
+                <div class="footer-info">
+                    <p>Developed at Laguna State Polytechnic University Sta. Cruz Campus</p>
+                    <p class="footer-year">© 2024 All Rights Reserved</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const feed = document.getElementById('feed');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const status = document.getElementById('status');
+        const alertBox = document.getElementById('alertBox');
+        const alertTitle = document.getElementById('alertTitle');
+        const alertDetails = document.getElementById('alertDetails');
+        const alertClose = document.getElementById('alertClose');
+        const videoContainer = document.getElementById('videoContainer');
+        const videoOverlay = document.getElementById('videoOverlay');
+        const fireCountDisplay = document.getElementById('fireCount');
+        const smokeCountDisplay = document.getElementById('smokeCount');
+
+        // Text-to-Speech for audio alerts
+        const speechSynthesis = window.speechSynthesis;
+        let isAlertPlaying = false;
+        let soundEnabled = true;
+        const soundToggle = document.getElementById('soundToggle');
+
+        // Sound toggle functionality
+        soundToggle.onclick = () => {
+            soundEnabled = !soundEnabled;
+            if (soundEnabled) {
+                soundToggle.innerHTML = '<span class="btn-icon">🔊</span> Sound: ON';
+                soundToggle.style.background = 'linear-gradient(135deg, #00c851, #00a841)';
+                
+                // Test sound
+                speakAlert("Sound alerts enabled");
+            } else {
+                soundToggle.innerHTML = '<span class="btn-icon">🔇</span> Sound: OFF';
+                soundToggle.style.background = 'linear-gradient(135deg, #888, #666)';
+                
+                // Cancel any ongoing speech
+                speechSynthesis.cancel();
+                isAlertPlaying = false;
+            }
+        };
+
+        function speakAlert(message) {
+            // Check if sound is enabled
+            if (!soundEnabled) return;
+            
+            // Prevent overlapping alerts
+            if (isAlertPlaying) return;
+            
+            // Cancel any ongoing speech
+            speechSynthesis.cancel();
+            
+            const utterance = new SpeechSynthesisUtterance(message);
+            utterance.rate = 1.0;  // Normal speed
+            utterance.pitch = 1.0;  // Normal pitch
+            utterance.volume = 1.0;  // Max volume
+            utterance.lang = 'en-US';
+            
+            // Set voice to a clear, urgent one if available
+            const voices = speechSynthesis.getVoices();
+            const preferredVoice = voices.find(voice => 
+                voice.name.includes('Google') || 
+                voice.name.includes('Microsoft') ||
+                voice.lang === 'en-US'
+            );
+            if (preferredVoice) {
+                utterance.voice = preferredVoice;
+            }
+            
+            isAlertPlaying = true;
+            
+            utterance.onend = () => {
+                isAlertPlaying = false;
+            };
+            
+            utterance.onerror = () => {
+                isAlertPlaying = false;
+            };
+            
+            speechSynthesis.speak(utterance);
+        }
+
+        // Load voices (some browsers need this)
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = () => {
+                speechSynthesis.getVoices();
+            };
+        }
+
+        // Alert close button functionality
+        alertClose.onclick = () => {
+            alertBox.classList.add('alert-hidden');
+            speechSynthesis.cancel(); // Stop any ongoing alert
+        };
+
+        // Modal functionality
+        const aboutModal = document.getElementById('aboutModal');
+        const aboutBtn = document.getElementById('aboutBtn');
+        const closeBtn = document.querySelector('.close-btn');
+
+        aboutBtn.onclick = (e) => {
+            e.preventDefault();
+            aboutModal.style.display = 'block';
+            setTimeout(() => aboutModal.classList.add('show'), 10);
+        };
+
+        closeBtn.onclick = () => {
+            aboutModal.classList.remove('show');
+            setTimeout(() => aboutModal.style.display = 'none', 300);
+        };
+
+        window.onclick = (e) => {
+            if (e.target === aboutModal) {
+                aboutModal.classList.remove('show');
+                setTimeout(() => aboutModal.style.display = 'none', 300);
+            }
+        };
+
+        // Chart Setup
+        const ctx = document.getElementById('detectionChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: { 
+                labels: [], 
+                datasets: [
+                    { 
+                        label: 'Fire', 
+                        data: [], 
+                        borderColor: '#ff4444', 
+                        backgroundColor: 'rgba(255,68,68,0.2)', 
+                        tension: 0.4, 
+                        fill: true,
+                        borderWidth: 3,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#ff4444'
+                    },
+                    { 
+                        label: 'Smoke', 
+                        data: [], 
+                        borderColor: '#888', 
+                        backgroundColor: 'rgba(136,136,136,0.2)', 
+                        tension: 0.4, 
+                        fill: true,
+                        borderWidth: 3,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#888'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { 
+                    y: { 
+                        beginAtZero: true, 
+                        max: 10,
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: '#ccc' }
+                    },
+                    x: {
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: '#ccc' }
+                    }
+                },
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: '#ff4444',
+                        borderWidth: 1
+                    }
+                }
+            }
+        });
+
+        let fireCount = 0;
+        let smokeCount = 0;
+        let detectionInterval;
+        let eventSource = null;
+
+        function updateChart() {
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+            chart.data.labels.push(time);
+            chart.data.datasets[0].data.push(fireCount);
+            chart.data.datasets[1].data.push(smokeCount);
+            if (chart.data.labels.length > 20) {
+                chart.data.labels.shift();
+                chart.data.datasets.forEach(d => d.data.shift());
+            }
+            chart.update('quiet');
+        }
+
+        function updateStats() {
+            fireCountDisplay.textContent = fireCount;
+            smokeCountDisplay.textContent = smokeCount;
+        }
+
+        function showAlert(type, count) {
+            // Only show alert if count is greater than 0
+            if (count === 0) return;
+            
+            alertBox.classList.remove('alert-hidden');
+            
+            let alertMessage = '';
+            
+            if (type === 'fire') {
+                alertTitle.innerHTML = "🔥 FIRE DETECTED!";
+                alertDetails.textContent = `Detected ${count} fire instance(s)`;
+                alertBox.style.background = 'linear-gradient(135deg, #ff0000, #cc0000)';
+                alertBox.style.border = '3px solid #ff4444';
+                alertMessage = `Warning! Fire detected! ${count} fire instance${count > 1 ? 's' : ''} found!`;
+            } else {
+                alertTitle.innerHTML = "💨 SMOKE DETECTED!";
+                alertDetails.textContent = `Detected ${count} smoke instance(s)`;
+                alertBox.style.background = 'linear-gradient(135deg, #444, #222)';
+                alertBox.style.border = '3px solid #888';
+                alertMessage = `Warning! Smoke detected! ${count} smoke instance${count > 1 ? 's' : ''} found!`;
+            }
+            
+            // Speak the alert
+            speakAlert(alertMessage);
+            
+            // Auto-hide after 6 seconds
+            setTimeout(() => {
+                alertBox.classList.add('alert-hidden');
+            }, 6000);
+        }
+
+        function connectToDetectionStream() {
+            // Close existing connection if any
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            // Create new EventSource connection
+            eventSource = new EventSource('/detections');
+
+            eventSource.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    const previousFire = fireCount;
+                    const previousSmoke = smokeCount;
+                    
+                    fireCount = data.fire;
+                    smokeCount = data.smoke;
+                    
+                    // Show alert if detection count increased
+                    if (fireCount > previousFire && fireCount > 0) {
+                        showAlert('fire', fireCount);
+                    }
+                    if (smokeCount > previousSmoke && smokeCount > 0) {
+                        showAlert('smoke', smokeCount);
+                    }
+                    
+                    updateStats();
+                    updateChart();
+                } catch (e) {
+                    console.error('Error parsing detection data:', e);
+                }
+            };
+
+            eventSource.onerror = function(error) {
+                console.error('EventSource error:', error);
+                if (eventSource.readyState === EventSource.CLOSED) {
+                    // Try to reconnect after 3 seconds
+                    setTimeout(() => {
+                        if (capturing) {
+                            connectToDetectionStream();
+                        }
+                    }, 3000);
+                }
+            };
+        }
+
+        startBtn.onclick = () => {
+            fetch('/start').then(() => {
+                feed.src = '/video?t=' + new Date().getTime();
+                videoOverlay.style.display = 'none';
+                videoContainer.classList.add('active');
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                status.innerHTML = '<span class="status-icon">🟢</span> Detecting fire/smoke...';
+                status.style.color = "#00ff00";
+                status.style.borderColor = "#00ff00";
+
+                // Reset counters
+                fireCount = 0;
+                smokeCount = 0;
+                updateStats();
+
+                // Connect to real-time detection stream
+                connectToDetectionStream();
+            });
+        };
+
+        stopBtn.onclick = () => {
+            fetch('/stop').then(() => {
+                feed.src = '';
+                videoOverlay.style.display = 'flex';
+                videoContainer.classList.remove('active');
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                status.innerHTML = '<span class="status-icon">⏸️</span> Camera Stopped';
+                status.style.color = "#ff0000";
+                status.style.borderColor = "#ff0000";
+                
+                // Close detection stream
+                if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                }
+                
+                // Stop any ongoing speech
+                speechSynthesis.cancel();
+                
+                fireCount = 0;
+                smokeCount = 0;
+                updateStats();
+                updateChart();
+            });
+        };
+    </script>
+
+    <style>
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal.show {
+            opacity: 1;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1a1a1a, #0f0f0f);
+            margin: 5% auto;
+            padding: 0;
+            border: 2px solid #ff4444;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 60px rgba(255, 68, 68, 0.5);
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #ff4444, #cc0000);
+            padding: 30px;
+            border-radius: 18px 18px 0 0;
+            text-align: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: white;
+            font-size: 2rem;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .close-btn {
+            color: white;
+            float: right;
+            font-size: 35px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            line-height: 20px;
+        }
+
+        .close-btn:hover {
+            color: #ff0000;
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 40px;
+        }
+
+        .modal-section {
+            margin-bottom: 35px;
+        }
+
+        .modal-section h3 {
+            color: #ff4444;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+
+        .modal-section p {
+            color: #ccc;
+            line-height: 1.8;
+            font-size: 1.05rem;
+        }
+
+        .modal-section ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .modal-section ul li {
+            color: #ccc;
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .modal-section ul li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #ff4444;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .team-card {
+            background: rgba(255,255,255,0.03);
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid #333;
+            text-align: center;
+            transition: 0.3s;
+        }
+
+        .team-card:hover {
+            transform: translateY(-5px);
+            border-color: #ff4444;
+            box-shadow: 0 5px 20px rgba(255, 68, 68, 0.3);
+        }
+
+        .team-avatar img {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #ff4444;
+            margin-bottom: 15px;
+        }
+
+        .team-card h4 {
+            color: white;
+            margin: 10px 0;
+            font-size: 1.3rem;
+        }
+
+        .team-card .role {
+            color: #ff4444;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .team-card .description {
+            color: #aaa;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .tech-stack .tech-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .badge {
+            background: linear-gradient(135deg, #ff4444, #cc0000);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            box-shadow: 0 3px 10px rgba(255, 68, 68, 0.3);
+        }
+
+        .modal-footer {
+            background: #0a0a0a;
+            padding: 20px;
+            text-align: center;
+            border-radius: 0 0 18px 18px;
+            border-top: 1px solid #333;
+        }
+
+        .modal-footer p {
+            margin: 0;
+            color: #666;
+        }
+
+        /* Video Overlay */
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .overlay-content {
+            text-align: center;
+        }
+
+        .camera-icon {
+            font-size: 4rem;
+            margin-bottom: 15px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .overlay-hint {
+            color: #888;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+
+        /* Stats Container */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.03);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #333;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: 0.3s;
+        }
+
+        .stat-card:hover {
+            border-color: #ff4444;
+            transform: translateY(-3px);
+        }
+
+        .stat-icon {
+            font-size: 2.5rem;
+        }
+
+        .stat-info h4 {
+            color: #ccc;
+            font-size: 0.9rem;
+            margin: 0 0 5px 0;
+        }
+
+        .stat-value {
+            color: #ff4444;
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .status-container {
+            margin-top: 20px;
+        }
+
+        .status-icon {
+            margin-right: 8px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .chart-info {
+            text-align: center;
+            margin-top: 15px;
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .footer-content {
+            text-align: center;
+        }
+
+        .footer-logo h3 {
+            color: #ff4444;
+            margin-bottom: 10px;
+        }
+
+        .footer-logo p {
+            color: #888;
+            margin-bottom: 20px;
+        }
+
+        .footer-info p {
+            color: #666;
+            margin: 5px 0;
+        }
+
+        .footer-year {
+            margin-top: 15px !important;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10% auto;
+            }
+            
+            .modal-body {
+                padding: 25px;
+            }
+            
+            .team-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</body>
+</html>
